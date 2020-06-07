@@ -1,0 +1,47 @@
+---
+- hosts: "{{ NODE_GROUP }}"
+  vars:
+    sudo_users:
+       # password must be generated through "mkpasswd" command from 'whois' package
+      - login: validator
+        group: validator
+        password: ''
+
+  tasks:
+    - name: Make sure we have a 'sudo' group
+      group:
+        name: sudo
+        state: present
+
+    - name: Create a login user
+      user:
+        name: "{{ item.login }}"
+        password: "{{ item.password }}"
+        groups:
+          - sudo
+        state: present
+        shell: /bin/bash
+        system: no             # Defaults to no
+        createhome: yes        # Defaults to yes
+        home: /home/{{ item.login }}  # Defaults to /home/<username>
+      with_items: "{{ sudo_users }}"    
+
+    - name: Add .ssh directories
+      file:
+        path=/home/{{ item.login }}/.ssh
+        state=directory
+        mode=0700
+        owner={{ item.login }}
+        group={{ item.group|default(item.login)  }}
+      with_items: "{{ sudo_users }}"
+
+    - name: create authorized_keys file
+      file: path=/home/{{ item.login }}/.ssh/authorized_keys state=touch mode=0644
+      with_items: "{{ sudo_users }}"
+
+    - name: insert public ssh key for user sahil
+      blockinfile:
+        dest: /home/{{ item.login }}/.ssh/authorized_keys
+        block: |
+          ssh-rsa AAA...
+      with_items: "{{ sudo_users }}"

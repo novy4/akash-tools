@@ -189,11 +189,11 @@
     replace: 'private_peer_ids = "{{ private_peer_ids }}"'
   tags: sentry
 
-- name: changing mempool size
+- name: change mempool size
   replace:
     path: $HOME/.akashd/config/config.toml
     regexp: 'size = 5000'
-    replace: 'size = 10000'
+    replace: 'size = 3000'
   tags: 
     - sentry
     - validator
@@ -241,23 +241,32 @@
     - sentry
     - validator
 
+- name: Patch user in systemd unit file
+  become: yes
+  replace:
+    path: /etc/systemd/system/akashd.service
+    regexp: 'User=.*$'
+    replace: 'User={{ ansible_ssh_user }}'
+  tags: 
+    - sentry
+    - validator
+
+- name: Patch path in systemd unit file
+  become: yes
+  replace:
+    path: /etc/systemd/system/akashd.service
+    regexp: 'ExecStart=.*$'
+    replace: 'ExecStart=/home/{{ ansible_ssh_user }}/go/bin/akashd start  --pruning nothing'
+  tags: 
+    - sentry
+    - validator
+
 - name: Start_Akash
   become: yes
   systemd:
     name: akashd
     state: started
     enabled: yes
-  tags: 
-    - sentry
-    - validator
-
-- name: Wallet recovery
-  shell: echo "{{ seed_phrase }}" | $HOME/go/bin/blzcli keys add validator --recover
-  tags: 
-    - validator
-
-- pause:
-    seconds: 10
   tags: 
     - sentry
     - validator
